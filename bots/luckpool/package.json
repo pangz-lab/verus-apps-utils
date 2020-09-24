@@ -1,0 +1,14 @@
+{
+  "name": "luckpool",
+  "version": "1.0.0",
+  "description": "",
+  "main": "discord-messenger.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "pangzlab",
+  "license": "ISC",
+  "dependencies": {
+    "node-fetch": "^2.6.1"
+  }
+}
