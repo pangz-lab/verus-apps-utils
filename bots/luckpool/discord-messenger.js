@@ -1,3 +1,4 @@
+//https://luckpool.net/verus/payments/RUYVdsamoaJ5JwB2YZyPHCAVXeNa87GV5Q
 const fetch = require('node-fetch');
 const fs = require('fs');
 const STATE_FILE = process.cwd()+'/state.json';
