@@ -65,9 +65,27 @@ async function main() {
         saveStates(DEFAULT_STATES);
 		states = await getStates();
     }    
-    await checkLastPaymet(states);
+    await checkLastPayment(states);
     await checkLastMinedBlock(states);
 	await logMessage("execute");
+}
+
+async function getPoolStats(name) {
+  const puppeteer = require('puppeteer');
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.setViewport({
+    width: 1829,
+    height: 932,
+    deviceScaleFactor: 10,
+  });
+  await page.goto('https://luckpool.net/verus/stats.html');
+  const [button] = await page.$x('//*[@id="minersTable"]/thead/tr/th[4]');
+  if (button) {
+    await button.click();
+  }
+  await page.screenshot({ path: 'network_stats/'+name+'_stat.png' });
+  await browser.close();
 }
 
 async function sendToChat(body) {
@@ -78,7 +96,7 @@ async function sendToChat(body) {
     }).then(json => console.log(json));
 }
 
-async function checkLastPaymet(states) {
+async function checkLastPayment(states) {
     const lastPayment = await fetchEndpointData(LUCKPOOL_PAYMENT);
 	
     if(states.lastPaymentTx == lastPayment[0]) {
@@ -113,11 +131,12 @@ async function checkLastMinedBlock(states) {
 	var message = MESSAGE_MINER_JACKPOT;
 	
 	states.lastMinedBlockCount = mineCount;
-	message.content = megaIndicator+"\n\nYahooooo! 📢📢📢\n[Miner's Jackpot]("+LUCKPOOL.host+"/verus/miner.html?"+TADDRESS+"),\n\nMiner Name : "+minerName[1]+"\nType               : "+(isMegaBlock? "Mega" : "Normal")+"\nNumber         : "+mineCount+"\nSize                 : "+blockSize+" VRSC\nShare              : "+share+" VRSC\nTx Hash         : ["+txHash+"](https://explorer.verus.io/block/"+txHash+")\n\n"+megaIndicator;
+	message.content = megaIndicator+"\n\nYahooooo! 📢📢📢\n[Miner's Jackpot]("+LUCKPOOL.host+"/verus/miner.html?"+TADDRESS+"),\n\nLuck                : #"+mineCount+"\nMiner Name : "+minerName[1]+"\nType               : "+(isMegaBlock? "Mega" : "Normal")+"\nSize                 : "+blockSize+" VRSC\nShare              : "+share+" VRSC\nTx Hash         : ["+txHash+"](https://explorer.verus.io/block/"+txHash+")\n\n"+megaIndicator;
 	message.embeds = (isMegaBlock)? EMBEDS_MEGA_BLOCK : EMBEDS_NORMAL_BLOCK;
 	
 	saveStates(states);
-	sendToChat(message);
+  sendToChat(message);
+  getPoolStats(mineCount+'_'+minerName[1]);
 }
 
 async function fetchEndpointData(endpoint){
