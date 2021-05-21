@@ -1,8 +1,9 @@
 //https://luckpool.net/verus/payments/RUYVdsamoaJ5JwB2YZyPHCAVXeNa87GV5Q
 const fetch = require('node-fetch');
 const fs = require('fs');
-const STATE_FILE = process.cwd()+'/state.json';
-const LOG_FILE = process.cwd()+'/process.log';
+const BP = "C:/Users/pangz/Documents/Projects/Git/verus-apps-utils/bots/luckpool/";
+const STATE_FILE = BP+'/state.json';
+const LOG_FILE = BP+'/process.log';
 const DISCORD_URI_TEST = 'https://discordapp.com/api/webhooks/700222471017594921/z7452sohRXZhRqGJUHCPtsJhCR00ANQkAXA0IolD3psCogdmymwJXAJQa8Dpp3ggGHNW';
 const DISCORD_URI_LIVE = 'https://discordapp.com/api/webhooks/758004219247591564/rVB_WOjGoHjfBdN5fm-48B8pGCJY9qwBRrv6DFIFlszS0WVpzCuzYuQNGQmTp8TefFX_';
 const DISCORD_URI = DISCORD_URI_LIVE;
@@ -16,7 +17,7 @@ const LUCKPOOL = {
 
 const LUCKPOOL_PAYMENT = LUCKPOOL.host+'/'+LUCKPOOL.verusEndpoint+'/'+TADDRESS;
 const LUCKPOOL_MINED_BLOCKS = LUCKPOOL.host+'/'+LUCKPOOL.verusMinedBlockEndpoint+'/'+TADDRESS;
-const DEFAULT_STATES = {lastPaymentTx: "", lastMinedBlockCount: 0};
+const DEFAULT_STATES = {lastPaymentTx: "", "lastMinedBlockHash":"xxx", lastMinedBlockCount: 0};
 const NORMAL_BLOCK_SIZE = 12;
 const NORMAL_BLOCK_REWARD = 1;
 const MEGA_BLOCK_THRESHOLD = 40;
@@ -84,7 +85,7 @@ async function getPoolStats(name) {
   if (button) {
     await button.click();
   }
-  await page.screenshot({ path: 'network_stats/'+name+'_stat.png' });
+  await page.screenshot({ path: BP+'network_stats/'+name+'_stat.png' });
   await browser.close();
 }
 
@@ -114,29 +115,32 @@ async function checkLastPayment(states) {
 
 async function checkLastMinedBlock(states) {
     const lastMinedBlocks = await fetchEndpointData(LUCKPOOL_MINED_BLOCKS);
-	const mineCount = Object.keys(lastMinedBlocks).length;
+	const dataParts = lastMinedBlocks[0].split(":");
+	const txHash = dataParts[0];
 	
-	if(parseInt(states.lastMinedBlockCount) == mineCount) {
+	if(states.lastMinedBlockHash.trim() == txHash.trim()) {
 		return 0;
     }
 	
-	const dataParts = lastMinedBlocks[0].split(":");
-	const txHash = dataParts[0];
+	// const dataParts = lastMinedBlocks[0].split(":");
+	// const txHash = dataParts[0];
 	const minerName = dataParts[3].split(".");
 	const blockSize = parseInt(dataParts[8])*0.00000001;
 	const isHybridMiner = dataParts[3].includes('hybrid') ? true : false;
 	const share = (isHybridMiner)? blockSize*SHARE_PERCENTAGE : NORMAL_BLOCK_REWARD;
 	const isMegaBlock = (blockSize > NORMAL_BLOCK_SIZE && blockSize > blockSize+MEGA_BLOCK_THRESHOLD);
 	const megaIndicator = (isMegaBlock) ? "▫️▫️▫️▫️💵💰⛏💎▫️▫️▫️▫️" : "️▫️▫️▫️💵💰️▫️▫️▫️";
+	const mineCount = parseInt(states.lastMinedBlockCount)+1;
 	var message = MESSAGE_MINER_JACKPOT;
 	
 	states.lastMinedBlockCount = mineCount;
+	states.lastMinedBlockHash = txHash;
 	message.content = megaIndicator+"\n\nYahooooo! 📢📢📢\n[Miner's Jackpot]("+LUCKPOOL.host+"/verus/miner.html?"+TADDRESS+"),\n\nLuck                : #"+mineCount+"\nMiner Name : "+minerName[1]+"\nType               : "+(isMegaBlock? "Mega" : "Normal")+"\nSize                 : "+blockSize+" VRSC\nShare              : "+share+" VRSC\nTx Hash         : ["+txHash+"](https://explorer.verus.io/block/"+txHash+")\n\n"+megaIndicator;
 	message.embeds = (isMegaBlock)? EMBEDS_MEGA_BLOCK : EMBEDS_NORMAL_BLOCK;
 	
 	saveStates(states);
-  sendToChat(message);
-  getPoolStats(mineCount+'_'+minerName[1]);
+	sendToChat(message);
+	getPoolStats(mineCount+'_'+minerName[1]);
 }
 
 async function fetchEndpointData(endpoint){
